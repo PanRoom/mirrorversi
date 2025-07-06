@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ミラバーシ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="main-content">
+        <div id="title-screen">
+            <h1 class="game-title">ミラバーシ</h1>
+            <p class="title-description">ドラッグで盤面を自由に移動できます</p>
+            <div class="title-buttons">
+                <button id="start-button" class="btn">ゲームスタート</button>
+                <button id="rule-button" class="btn">ルール</button>
+            </div>
+        </div>
+
+        <div id="game-screen" class="hidden">
+            <div id="viewport">
+                <div id="infinite-board">
+                    </div>
+            </div>
+
+            <div id="game-ui">
+                <div id="info-area">
+                    <p>現在のターン: <span id="current-turn"></span>　　</p>
+                    <div id="score-area">
+                        <span class="score-display">黒: <span id="black-score"></span></span>
+                        <span class="score-display">白: <span id="white-score"></span></span>
+                    </div>
+                </div>
+                <div id="message-container">
+                    <div id="pass-message" class="hidden"></div>
+                    <div id="game-over-message" class="hidden"></div>
+                </div>
+                <div class="game-buttons">
+                    <button id="reset-button" class="btn">リセット</button>
+                    <button id="back-to-title-button" class="btn btn-secondary">タイトルへ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="rule-modal" class="hidden">
+        <div class="modal-content">
+            <span id="close-rule-button" class="close-button">&times;</span>
+            <h2>ミラバーシのルール</h2>
+            <ul>
+                <li><strong>特殊ルール：無限にループする盤面</strong>
+                    <p>このリバーシの盤面は、無限に広がっており、ドラッグで自由に視点を移動できます。盤面のロジックは8x8でループしており、端を越えて相手の石を挟むことができます。</p>
+                </li>
+                <li><strong>ゲームの目的/石の置き方/終了条件</strong>
+                    <p>基本的なルールは通常のリバーシと同じです。</p>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="confirmation-modal" class="hidden">
+        <div class="modal-content">
+            <p id="confirmation-message"></p>
+            <div class="confirmation-buttons">
+                <button id="confirm-yes-button" class="btn">はい</button>
+                <button id="confirm-no-button" class="btn btn-secondary">いいえ</button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

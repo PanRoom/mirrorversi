@@ -1,0 +1,232 @@
+/* (既存のスタイルは変更なし) */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #333;
+}
+
+.hidden { display: none !important; }
+
+/* === UIコンテンツのベース === */
+#main-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* === タイトル画面 === */
+#title-screen {
+    text-align: center;
+    background: rgba(255,255,255,0.95);
+    padding: 30px 20px;
+    border-radius: 20px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.2);
+    width: 90%;
+    max-width: 500px;
+    box-sizing: border-box;
+}
+.game-title { font-size: 36px; color: #333; margin: 0 0 10px 0; }
+.title-description { font-size: 14px; color: #555; margin: 0 0 30px 0; }
+.title-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 15px;
+}
+
+/* === ボタン共通スタイル === */
+.btn {
+    padding: 12px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 8px;
+    transition: background-color 0.3s, transform 0.1s;
+    white-space: nowrap;
+}
+.btn:hover { background-color: #0056b3; }
+.btn:active { transform: scale(0.98); }
+.btn-secondary { background-color: #6c757d; }
+.btn-secondary:hover { background-color: #5a6268; }
+
+/* === ゲーム画面 === */
+#game-screen {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background-color: rgba(240, 240, 240, 0.5);
+    backdrop-filter: blur(2px);
+}
+
+/* ビューポート */
+#viewport {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: grab;
+    overflow: hidden;
+}
+#viewport:active { cursor: grabbing; }
+
+/* 無限盤面 */
+#infinite-board {
+    position: absolute;
+    will-change: transform;
+}
+
+/* マスのスタイル */
+.cell {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background-color: #008000;
+    box-sizing: border-box;
+    border: 1px solid #005a00;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.cell.playable:hover::after {
+    content: '';
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+.stone { width: 42px; height: 42px; border-radius: 50%; box-shadow: 1px 1px 3px rgba(0,0,0,0.5); }
+.black { background-color: #111; }
+.white { background-color: #fff; }
+
+/* === ゲームUI（オーバーレイ） === */
+#game-ui {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 10px;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+#game-ui > * { pointer-events: all; }
+
+#info-area, .game-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(0,0,0,0.6);
+    padding: 8px 12px;
+    border-radius: 10px;
+    color: white;
+    margin: 0 auto;
+    font-size: 14px;
+}
+.game-buttons { gap: 15px; }
+
+#message-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 0;
+    background: none;
+    width: 90%;
+    max-width: 400px;
+}
+
+/* ▼▼▼【変更点】リザルト表示のスタイルを修正 ▼▼▼ */
+#game-over-message, #pass-message {
+    position: relative;
+    padding: 20px 30px;
+    /* background-color と color はJSで設定するため削除 */
+    font-weight: bold;
+    text-align: center;
+    border-radius: 10px;
+    font-size: 22px;
+    box-sizing: border-box;
+}
+
+#game-over-message {
+    border: 4px solid #888; /* 灰色の縁を追加 */
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+}
+
+.score-in-result {
+    display: block;
+    font-size: 0.7em;
+    font-weight: normal;
+    opacity: 0.9;
+    margin-top: 8px;
+}
+/* ▲▲▲ ここまで ▲▲▲ */
+
+#pass-message {
+    background-color: rgba(0,0,0,0.8);
+    font-size: 20px;
+    color: white;
+}
+
+
+/* === ルールモーダル === */
+#rule-modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center;
+    align-items: center; z-index: 1000; padding: 10px; box-sizing: border-box;
+}
+.modal-content {
+    background-color: #fff; padding: 20px; border-radius: 10px;
+    max-width: 600px; width: 100%; position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.close-button {
+    position: absolute; top: 10px; right: 20px; font-size: 32px;
+    color: #aaa; cursor: pointer;
+}
+
+/* ▼▼▼【ここから追加】▼▼▼ */
+/* === 確認モーダル === */
+#confirmation-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1001; /* ルールモーダルより手前に表示 */
+}
+#confirmation-modal .modal-content {
+    background-color: #fff;
+    padding: 25px 30px;
+    border-radius: 10px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    color: #333;
+}
+#confirmation-message {
+    font-size: 16px;
+    margin: 0 0 25px 0;
+}
+.confirmation-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+/* ▲▲▲【ここまで追加】▲▲▲ */
