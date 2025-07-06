@@ -8,24 +8,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const ruleButton = document.getElementById('rule-button');
     const resetButton = document.getElementById('reset-button');
     const backToTitleButton = document.getElementById('back-to-title-button');
-    const currentTurnElement = document.getElementById('current-turn');
-    const blackScoreElement = document.getElementById('black-score');
-    const whiteScoreElement = document.getElementById('white-score');
+    const turnIndicatorBlack = document.getElementById('turn-indicator-black');
+    const turnIndicatorWhite = document.getElementById('turn-indicator-white');
     const gameOverMessageElement = document.getElementById('game-over-message');
     const passMessageElement = document.getElementById('pass-message');
     const ruleModal = document.getElementById('rule-modal');
     const closeRuleButton = document.getElementById('close-rule-button');
-    // ▼▼▼【ここから追加】▼▼▼
-    const confirmationModal = document.getElementById('confirmation-modal');
-    const confirmationMessage = document.getElementById('confirmation-message');
-    const confirmYesButton = document.getElementById('confirm-yes-button');
-    const confirmNoButton = document.getElementById('confirm-no-button');
-    // ▲▲▲【ここまで追加】▲▲▲
 
     // === 定数 ===
     const CELL_SIZE = 52;
     const BOARD_SIZE = 8;
-    const EMPTY = 0, BLACK = 1, WHITE = 2;
+    const EMPTY = 0, BLACK = 1, WHITE = 2, BLOCK = 3;
 
     // === ゲームの状態 ===
     let boardState = [];
@@ -34,8 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const directions = [
         [-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]
     ];
-    // ▼▼▼【追加】▼▼▼
-    let currentConfirmAction = null;
 
     // === 視点とドラッグの状態 ===
     let viewX = 0, viewY = 0;
@@ -44,50 +35,31 @@ document.addEventListener('DOMContentLoaded', () => {
     let startInteractionX, startInteractionY;
     let lastInteractionX, lastInteractionY;
 
-    // === イベントリスナー ===
+    // ▼▼▼【重要】前回省略されていたイベントリスナーのコードをここに追加 ▼▼▼
     startButton.addEventListener('click', () => {
         titleScreen.classList.add('hidden');
         gameScreen.classList.remove('hidden');
         initializeGame();
     });
-
-    // ▼▼▼【ここから変更】▼▼▼
-    // 「タイトルへ」ボタンの処理
     backToTitleButton.addEventListener('click', () => {
-        showConfirmation(
-            'タイトルに戻りますか？現在のゲームは失われます。',
-            () => {
-                gameScreen.classList.add('hidden');
-                titleScreen.classList.remove('hidden');
-            }
-        );
+        gameScreen.classList.add('hidden');
+        titleScreen.classList.remove('hidden');
     });
-
-    // 「リセット」ボタンの処理
-    resetButton.addEventListener('click', () => {
-        showConfirmation('本当にリセットしますか？', initializeGame);
-    });
-    // ▲▲▲【ここまで変更】▲▲▲
-
+    resetButton.addEventListener('click', initializeGame);
     ruleButton.addEventListener('click', () => ruleModal.classList.remove('hidden'));
     closeRuleButton.addEventListener('click', () => ruleModal.classList.add('hidden'));
     ruleModal.addEventListener('click', e => { if (e.target === ruleModal) ruleModal.classList.add('hidden'); });
 
-    // ▼▼▼【ここから追加】▼▼▼
-    // 確認モーダルのボタン処理
-    confirmYesButton.addEventListener('click', () => {
-        if (currentConfirmAction) {
-            currentConfirmAction();
-        }
-        hideConfirmation();
-    });
-    confirmNoButton.addEventListener('click', hideConfirmation);
-    confirmationModal.addEventListener('click', e => {
-        if (e.target === confirmationModal) {
-            hideConfirmation();
-        }
-    });
-    // ▲▲▲【ここまで追加】▲▲▲
+    // --- マウスとタッチ操作のイベントリスナー ---
+    viewport.addEventListener('mousedown', handleInteractionStart);
+    window.addEventListener('mousemove', handleInteractionMove);
+    window.addEventListener('mouseup', handleInteractionEnd);
+    viewport.addEventListener('touchstart', handleInteractionStart, { passive: false });
+    window.addEventListener('touchmove', handleInteractionMove, { passive: false });
+    window.addEventListener('touchend', handleInteractionEnd);
+    // ▲▲▲ ここまでが修正箇所 ▲▲▲
+
+    // === 関数 ===
 
     function handleInteractionStart(e) {
         if (e.type === 'mousedown' && e.button !== 0) return;
@@ -136,38 +108,15 @@ document.addEventListener('DOMContentLoaded', () => {
         viewport.style.cursor = 'grab';
     }
 
-    viewport.addEventListener('mousedown', handleInteractionStart);
-    window.addEventListener('mousemove', handleInteractionMove);
-    window.addEventListener('mouseup', handleInteractionEnd);
-    viewport.addEventListener('touchstart', handleInteractionStart, { passive: false });
-    window.addEventListener('touchmove', handleInteractionMove, { passive: false });
-    window.addEventListener('touchend', handleInteractionEnd);
-
-    // ▼▼▼【ここから追加】▼▼▼
-    /**
-     * 確認モーダルを表示する
-     * @param {string} message - 表示するメッセージ
-     * @param {function} onConfirm - 「はい」を押したときに実行する関数
-     */
-    function showConfirmation(message, onConfirm) {
-        confirmationMessage.textContent = message;
-        currentConfirmAction = onConfirm;
-        confirmationModal.classList.remove('hidden');
-    }
-
-    /**
-     * 確認モーダルを非表示にする
-     */
-    function hideConfirmation() {
-        confirmationModal.classList.add('hidden');
-        currentConfirmAction = null;
-    }
-    // ▲▲▲【ここまで追加】▲▲▲
-
     function initializeGame() {
         boardState = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(EMPTY));
+        // 初期コマ配置
         boardState[3][3] = WHITE; boardState[3][4] = BLACK;
         boardState[4][3] = BLACK; boardState[4][4] = WHITE;
+        // ブロック配置
+        boardState[2][2] = BLOCK; boardState[2][5] = BLOCK;
+        boardState[5][2] = BLOCK; boardState[5][5] = BLOCK;
+
         currentPlayer = BLACK;
         isGameOver = false;
         gameOverMessageElement.classList.add('hidden');
@@ -197,16 +146,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 cell.dataset.col = col;
                 const boardRow = normalize(row);
                 const boardCol = normalize(col);
-                const stoneState = boardState[boardRow][boardCol];
-                if (stoneState !== EMPTY) {
-                    const stone = document.createElement('div');
-                    stone.className = 'stone ' + (stoneState === BLACK ? 'black' : 'white');
-                    cell.appendChild(stone);
-                } else {
+                const pieceState = boardState[boardRow][boardCol];
+
+                if (pieceState === EMPTY) {
                     const isPlayable = playableMoves.some(m => normalize(m.row) === boardRow && normalize(m.col) === boardCol);
                     if (isPlayable && !isGameOver) {
                         cell.classList.add('playable');
                     }
+                } else {
+                    let piece;
+                    if (pieceState === BLACK) {
+                        piece = document.createElement('div');
+                        piece.className = 'stone black';
+                    } else if (pieceState === WHITE) {
+                        piece = document.createElement('div');
+                        piece.className = 'stone white';
+                    } else if (pieceState === BLOCK) {
+                        piece = document.createElement('div');
+                        piece.className = 'block';
+                    }
+                    if (piece) cell.appendChild(piece);
                 }
                 infiniteBoard.appendChild(cell);
             }
@@ -238,10 +197,10 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let i = 1; i < BOARD_SIZE; i++) {
                 const r = normalize(row + dr * i);
                 const c = normalize(col + dc * i);
-                const currentStone = boardState[r][c];
-                if (currentStone === opponent) {
+                const currentPiece = boardState[r][c];
+                if (currentPiece === opponent) {
                     stonesInDirection.push({ row: r, col: c });
-                } else if (currentStone === player) {
+                } else if (currentPiece === player) {
                     if (stonesInDirection.length > 0) {
                         allFlippableStones.push(...stonesInDirection);
                     }
@@ -295,48 +254,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function updateInfo() {
-        let blackCount = 0, whiteCount = 0;
-        boardState.forEach(row => row.forEach(stone => {
-            if (stone === BLACK) blackCount++;
-            if (stone === WHITE) whiteCount++;
-        }));
-        blackScoreElement.textContent = blackCount;
-        whiteScoreElement.textContent = whiteCount;
-        currentTurnElement.textContent = (currentPlayer === BLACK) ? '黒' : '白';
+        if (currentPlayer === BLACK) {
+            turnIndicatorBlack.classList.add('active');
+            turnIndicatorWhite.classList.remove('active');
+        } else {
+            turnIndicatorBlack.classList.remove('active');
+            turnIndicatorWhite.classList.add('active');
+        }
     }
 
-    // (この関数は変更なし)
     function endGame() {
         isGameOver = true;
         updateInfo();
-
         const resultEl = gameOverMessageElement;
-        const blackCount = parseInt(blackScoreElement.textContent);
-        const whiteCount = parseInt(whiteScoreElement.textContent);
-        
-        let mainMessage = "";
-        const scoreMessage = `(${blackCount} - ${whiteCount})`;
-
-        // 結果に応じてスタイルとメッセージを設定
-        if (blackCount > whiteCount) {
+        let blackCount = 0, whiteCount = 0;
+        boardState.forEach(row => row.forEach(piece => {
+            if (piece === BLACK) blackCount++;
+            if (piece === WHITE) whiteCount++;
+        }));
+        const totalCount = blackCount + whiteCount;
+        let mainMessage = "", scoreMessage = "";
+        if (totalCount === 0) {
+            mainMessage = '引き分け';
+            resultEl.style.backgroundColor = '#008000';
+            resultEl.style.color = '#eee';
+            scoreMessage = `(黒 0.0% - 白 0.0%)`;
+        } else if (blackCount > whiteCount) {
             mainMessage = '黒の勝ち！';
             resultEl.style.backgroundColor = '#111';
             resultEl.style.color = '#fff';
+            const blackPercentRaw = (blackCount / totalCount) * 100;
+            const blackPercent = Math.round(blackPercentRaw * 10) / 10;
+            const whitePercent = 100.0 - blackPercent;
+            scoreMessage = `(黒 ${blackPercent.toFixed(1)}% - 白 ${whitePercent.toFixed(1)}%)`;
         } else if (whiteCount > blackCount) {
             mainMessage = '白の勝ち！';
             resultEl.style.backgroundColor = '#fff';
             resultEl.style.color = '#111';
+            const whitePercentRaw = (whiteCount / totalCount) * 100;
+            const whitePercent = Math.round(whitePercentRaw * 10) / 10;
+            const blackPercent = 100.0 - whitePercent;
+            scoreMessage = `(白 ${whitePercent.toFixed(1)}% - 黒 ${blackPercent.toFixed(1)}%)`;
         } else {
             mainMessage = '引き分け';
             resultEl.style.backgroundColor = '#008000';
             resultEl.style.color = '#eee';
+            scoreMessage = `(黒 50.0% - 白 50.0%)`;
         }
-        
-        // HTMLを組み立てて表示
-        resultEl.innerHTML = `
-            ${mainMessage}
-            <span class="score-in-result">${scoreMessage}</span>
-        `;
+        resultEl.innerHTML = `${mainMessage}<span class="score-in-result">${scoreMessage}</span>`;
         resultEl.classList.remove('hidden');
         renderBoard();
     }

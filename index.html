@@ -20,16 +20,18 @@
 
         <div id="game-screen" class="hidden">
             <div id="viewport">
-                <div id="infinite-board">
-                    </div>
+                <div id="infinite-board"></div>
             </div>
 
             <div id="game-ui">
-                <div id="info-area">
-                    <p>現在のターン: <span id="current-turn"></span>　　</p>
-                    <div id="score-area">
-                        <span class="score-display">黒: <span id="black-score"></span></span>
-                        <span class="score-display">白: <span id="white-score"></span></span>
+                <div id="turn-display-container">
+                    <div id="turn-indicator-black" class="turn-indicator">
+                        <div class="stone black"></div>
+                        <span>黒のターン</span>
+                    </div>
+                    <div id="turn-indicator-white" class="turn-indicator">
+                        <div class="stone white"></div>
+                        <span>白のターン</span>
                     </div>
                 </div>
                 <div id="message-container">
@@ -49,25 +51,19 @@
             <span id="close-rule-button" class="close-button">&times;</span>
             <h2>ミラバーシのルール</h2>
             <ul>
-                <li><strong>特殊ルール：無限にループする盤面</strong>
-                    <p>このリバーシの盤面は、無限に広がっており、ドラッグで自由に視点を移動できます。盤面のロジックは8x8でループしており、端を越えて相手の石を挟むことができます。</p>
+                <li><strong>特殊ルール：無限ループ盤面</strong>
+                    <p>このゲームの盤面は、上下・左右の端がそれぞれ繋がった無限の空間です。ドラッグで自由に視点を移動できます。</p>
                 </li>
-                <li><strong>ゲームの目的/石の置き方/終了条件</strong>
-                    <p>基本的なルールは通常のリバーシと同じです。</p>
+                <li><strong>特殊ルール：ライン制圧</strong>
+                    <p>通常は相手の石を自分の石で挟む必要がありますが、ある直線上の残り1マスを除いて全てが相手の石で埋まっている場合、そのマスに自分の石を置くことで、直線上の全ての石をひっくり返すことができます。</p>
+                </li>
+                 <li><strong>ゲームの終了</strong>
+                    <p>盤のマスがすべて埋まった時、または両者ともどこにも石を置けなくなった時にゲーム終了となります。</p>
                 </li>
             </ul>
         </div>
     </div>
 
-    <div id="confirmation-modal" class="hidden">
-        <div class="modal-content">
-            <p id="confirmation-message"></p>
-            <div class="confirmation-buttons">
-                <button id="confirm-yes-button" class="btn">はい</button>
-                <button id="confirm-no-button" class="btn btn-secondary">いいえ</button>
-            </div>
-        </div>
-    </div>
-    <script src="script.js"></script>
+    <script type="module" src="main.js"></script>
 </body>
 </html>
