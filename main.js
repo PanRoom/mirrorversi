@@ -1,119 +1,177 @@
 // main.js
-import { CELL_SIZE } from './config.js';
-import * as Game from './game.js';
-import * as DOM from './dom.js';
+import Game from './src/Game.js';
+import UI from './src/UI.js';
 
-// === DOM要素の取得 ===
-const titleScreen = document.getElementById('title-screen');
-const gameScreen = document.getElementById('game-screen');
-const viewport = document.getElementById('viewport');
-const startButton = document.getElementById('start-button');
-const ruleButton = document.getElementById('rule-button');
-const resetButton = document.getElementById('reset-button');
-const backToTitleButton = document.getElementById('back-to-title-button');
-const ruleModal = document.getElementById('rule-modal');
-const closeRuleButton = document.getElementById('close-rule-button');
-const confirmModal = document.getElementById('confirm-modal');
-const confirmMessage = document.getElementById('confirm-message');
-const confirmYesButton = document.getElementById('confirm-yes-button');
-const confirmNoButton = document.getElementById('confirm-no-button');
+let game;
+const ui = new UI();
+let placementMode = 'stone';
+let onConfirm = null;
+let isTitleActive = true;
+let currentGameSettings = null;
 
-// === 視点とドラッグの状態 ===
-let viewX = 0, viewY = 0;
+function showTitle() {
+    isTitleActive = true;
+    const titleGame = new Game({ boardSize: 8, blockCount: 0 });
+    ui.resetView(titleGame.getState());
+    ui.showScreen('title');
+    ui.render(titleGame.getState(), 'stone', []);
+}
+
+function startGame(settings) {
+    currentGameSettings = settings;
+    isTitleActive = false;
+    game = new Game(settings);
+    placementMode = 'stone';
+    ui.resetView(game.getState());
+    ui.showScreen('game');
+    updateFullUI();
+    ui.displayMessage(null);
+}
+
+// ▼▼▼【変更点】ターン交代の処理をシンプルに修正 ▼▼▼
+function handlePiecePlacement(row, col) {
+    if (game.getState().isGameOver || isTitleActive) return;
+    
+    const success = (placementMode === 'stone')
+        ? game.placeStone(row, col)
+        : game.placeBlock(row, col);
+    
+    if (success) {
+        placementMode = 'stone'; // 手番が終わったら自動的に石モードに戻す
+        
+        const gameStatus = game.switchTurn();
+
+        if (gameStatus.status === 'pass') {
+            ui.displayMessage('pass', gameStatus.passedPlayer);
+        } else if (gameStatus.status === 'end') {
+            ui.showResult(game.getState().board);
+        }
+        
+        updateFullUI();
+    }
+}
+
+function updateFullUI() {
+    if (!game) return;
+    const state = game.getState();
+    const validMoves = isTitleActive ? [] : game.getValidMoves(state.currentPlayer, placementMode);
+    ui.render(state, placementMode, validMoves);
+}
+
+document.getElementById('app').addEventListener('click', (e) => {
+    const action = e.target.dataset.action;
+    if (!action) return;
+
+    switch (action) {
+        case 'show-settings':
+            ui.toggleSettingsModal(true);
+            break;
+        case 'start-with-settings':
+            const boardSize = parseInt(ui.elements.settings.boardSizeSelect.value, 10);
+            const blockCount = parseInt(ui.elements.settings.blockCountInput.value, 10);
+            ui.toggleSettingsModal(false);
+            startGame({ boardSize, blockCount });
+            break;
+        case 'show-rules':
+            ui.toggleRuleModal(true);
+            break;
+        case 'close-modal':
+            ui.toggleRuleModal(false);
+            ui.toggleSettingsModal(false);
+            break;
+        case 'reset':
+            if (game) {
+                onConfirm = () => startGame(currentGameSettings);
+                ui.toggleConfirmModal(true, "ゲームをリセットしますか？");
+            }
+            break;
+        case 'back-to-title':
+            onConfirm = showTitle;
+            ui.toggleConfirmModal(true, "タイトルに戻りますか？\n現在のゲームは失われます。");
+            break;
+        case 'set-mode':
+            if (isTitleActive || !game) return;
+            placementMode = e.target.dataset.mode;
+            updateFullUI();
+            break;
+        case 'confirm-yes':
+            if (onConfirm) onConfirm();
+            ui.toggleConfirmModal(false);
+            onConfirm = null;
+            break;
+        case 'confirm-no':
+            ui.toggleConfirmModal(false);
+            onConfirm = null;
+            break;
+    }
+});
+
+ui.elements.settings.boardSizeSelect.addEventListener('change', () => {
+    ui.updateSettingsDefaults();
+});
+
+ui.elements.settings.blockCountInput.addEventListener('input', (e) => {
+    const input = e.target;
+    const max = parseInt(input.max, 10);
+    const value = parseInt(input.value, 10);
+
+    if (value > max) {
+        input.value = max;
+    }
+});
+
 let isInteracting = false;
 let didDrag = false;
-let startInteractionX, startInteractionY;
-let lastInteractionX, lastInteractionY;
+let startX, startY, lastX, lastY;
 
-// === 確認モーダルのロジック ===
-let onConfirmCallback = null;
+ui.elements.viewport.addEventListener('mousedown', start);
+ui.elements.viewport.addEventListener('touchstart', start, { passive: false });
+window.addEventListener('mousemove', move);
+window.addEventListener('touchmove', move, { passive: false });
+window.addEventListener('mouseup', end);
+window.addEventListener('touchend', end);
 
-function showConfirmation(message, callback) {
-    confirmMessage.textContent = message;
-    onConfirmCallback = callback;
-    confirmModal.classList.remove('hidden');
+function start(e) {
+    if (e.type === 'mousedown' && e.button !== 0) return;
+    e.preventDefault();
+    isInteracting = true; didDrag = false;
+    const point = e.touches ? e.touches[0] : e;
+    startX = lastX = point.clientX;
+    startY = lastY = point.clientY;
 }
 
-function closeConfirmation() {
-    confirmModal.classList.add('hidden');
-    onConfirmCallback = null;
-}
-
-// === ゲームのメイン処理 ===
-function startGame() {
-    Game.initialize();
-    const { board, player, over } = Game.getGameState();
-    const playableMoves = Game.getValidMoves(player);
-    
-    DOM.hideMessages();
-    viewX = -CELL_SIZE * 4 + viewport.clientWidth / 2;
-    viewY = -CELL_SIZE * 4 + viewport.clientHeight / 2;
-    DOM.renderBoard(board, playableMoves, over, viewX, viewY);
-    DOM.updateTurnIndicator(player);
-}
-
-function handleTap(cell) {
-    let { over, player } = Game.getGameState();
-    if (over) return;
-
-    const row = parseInt(cell.dataset.row);
-    const col = parseInt(cell.dataset.col);
-
-    const success = Game.placeStone(row, col);
-    if (!success) return;
-
-    const gameStatus = Game.checkGameStatus();
-    const newGameState = Game.getGameState();
-    
-    if (gameStatus.status === 'pass') {
-        DOM.displayPassMessage(gameStatus.passedPlayer);
-    } else if (gameStatus.status === 'end') {
-        DOM.displayResult(newGameState.board);
+function move(e) {
+    if (!isInteracting) return;
+    const point = e.touches ? e.touches[0] : e;
+    const dx = point.clientX - startX;
+    const dy = point.clientY - startY;
+    if (!didDrag && Math.sqrt(dx*dx + dy*dy) > 5) {
+        didDrag = true;
+        ui.elements.viewport.style.cursor = 'grabbing';
     }
-
-    const playableMoves = Game.getValidMoves(newGameState.player);
-    DOM.renderBoard(newGameState.board, playableMoves, newGameState.over, viewX, viewY);
-    DOM.updateTurnIndicator(newGameState.player);
+    if (didDrag) {
+        ui.updateView(point.clientX - lastX, point.clientY - lastY);
+    }
+    lastX = point.clientX; lastY = point.clientY;
 }
 
-// === イベントリスナー ===
-startButton.addEventListener('click', () => {
-    titleScreen.classList.add('hidden');
-    gameScreen.classList.remove('hidden');
-    startGame();
-});
+function end(e) {
+    if (!isInteracting) return;
+    
+    const wasDragging = didDrag;
+    
+    isInteracting = false;
+    didDrag = false;
+    ui.elements.viewport.style.cursor = 'grab';
 
-backToTitleButton.addEventListener('click', () => {
-    const action = () => {
-        gameScreen.classList.add('hidden');
-        titleScreen.classList.remove('hidden');
-    };
-    showConfirmation("タイトルに戻りますか？\n現在のゲームは失われます。", action);
-});
-
-resetButton.addEventListener('click', () => {
-    showConfirmation("ゲームをリセットしますか？", startGame);
-});
-
-ruleButton.addEventListener('click', () => ruleModal.classList.remove('hidden'));
-closeRuleButton.addEventListener('click', () => ruleModal.classList.add('hidden'));
-ruleModal.addEventListener('click', e => { if (e.target === ruleModal) ruleModal.classList.add('hidden'); });
-
-confirmYesButton.addEventListener('click', () => {
-    if (onConfirmCallback) {
-        onConfirmCallback();
+    if (wasDragging) {
+        const state = game ? game.getState() : new Game({boardSize: 8, blockCount: 0}).getState();
+        const validMoves = isTitleActive || !game ? [] : game.getValidMoves(state.currentPlayer, placementMode);
+        ui.render(state, placementMode, validMoves);
+    } else {
+        const cell = e.target.closest('.cell');
+        if (cell) handlePiecePlacement(cell.dataset.row, cell.dataset.col);
     }
-    closeConfirmation();
-});
+}
 
-confirmNoButton.addEventListener('click', closeConfirmation);
-
-function handleInteractionStart(e) { if (e.type === 'mousedown' && e.button !== 0) return; e.preventDefault(); isInteracting = true; didDrag = false; const point = e.touches ? e.touches[0] : e; startInteractionX = point.clientX; startInteractionY = point.clientY; lastInteractionX = point.clientX; lastInteractionY = point.clientY; }
-function handleInteractionMove(e) { if (!isInteracting) return; e.preventDefault(); const point = e.touches ? e.touches[0] : e; const dx = point.clientX - startInteractionX; const dy = point.clientY - startInteractionY; if (!didDrag && Math.sqrt(dx*dx + dy*dy) > 5) { didDrag = true; viewport.style.cursor = 'grabbing'; } if (didDrag) { const moveX = point.clientX - lastInteractionX; const moveY = point.clientY - lastInteractionY; viewX += moveX; viewY += moveY; viewport.querySelector('#infinite-board').style.transform = `translate(${viewX}px, ${viewY}px)`; } lastInteractionX = point.clientX; lastInteractionY = point.clientY; }
-function handleInteractionEnd(e) { if (!isInteracting) return; const { board, player, over } = Game.getGameState(); const playableMoves = Game.getValidMoves(player); if (didDrag) { DOM.renderBoard(board, playableMoves, over, viewX, viewY); } else { const targetCell = e.target.closest('.cell.playable'); if (targetCell) { handleTap(targetCell); } } isInteracting = false; viewport.style.cursor = 'grab'; }
-viewport.addEventListener('mousedown', handleInteractionStart);
-window.addEventListener('mousemove', handleInteractionMove);
-window.addEventListener('mouseup', handleInteractionEnd);
-viewport.addEventListener('touchstart', handleInteractionStart, { passive: false });
-window.addEventListener('touchmove', handleInteractionMove, { passive: false });
-window.addEventListener('touchend', handleInteractionEnd);
+showTitle();

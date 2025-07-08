@@ -7,14 +7,13 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <div id="main-content">
+    <div id="app">
         <div id="title-screen">
             <h1 class="game-title">ミラバーシ</h1>
             <p class="title-description">ドラッグで盤面を自由に移動できます</p>
             <div class="title-buttons">
-                <button id="start-button" class="btn">ゲームスタート</button>
-                <button id="rule-button" class="btn">ルール</button>
+                <button data-action="show-settings" class="btn">ゲームスタート</button>
+                <button data-action="show-rules" class="btn">ルール</button>
             </div>
         </div>
 
@@ -22,58 +21,112 @@
             <div id="viewport">
                 <div id="infinite-board"></div>
             </div>
-
-            <div id="game-ui">
-                <div id="turn-display-container">
-                    <div id="turn-indicator-black" class="turn-indicator">
+            <div id="game-ui" class="hidden">
+                <div id="action-panel">
+                    <div class="player-status" data-player="black">
                         <div class="stone black"></div>
-                        <span>黒のターン</span>
+                        <span class="player-name">黒</span>
+                        <div class="block-count">
+                            <div class="block-icon"></div>
+                            <span data-count="black-blocks"></span>
+                        </div>
                     </div>
-                    <div id="turn-indicator-white" class="turn-indicator">
+                    <div id="mode-buttons">
+                        <button data-action="set-mode" data-mode="stone" class="btn mode-btn">石</button>
+                        <button data-action="set-mode" data-mode="block" class="btn mode-btn">ブロック</button>
+                    </div>
+                    <div class="player-status" data-player="white">
                         <div class="stone white"></div>
-                        <span>白のターン</span>
+                        <span class="player-name">白</span>
+                        <div class="block-count">
+                            <div class="block-icon"></div>
+                            <span data-count="white-blocks"></span>
+                        </div>
                     </div>
                 </div>
-                <div id="message-container">
-                    <div id="pass-message" class="hidden"></div>
-                    <div id="game-over-message" class="hidden"></div>
-                </div>
+                <div id="message-container"></div>
                 <div class="game-buttons">
-                    <button id="reset-button" class="btn">リセット</button>
-                    <button id="back-to-title-button" class="btn btn-secondary">タイトルへ</button>
+                    <button data-action="reset" class="btn">リセット</button>
+                    <button data-action="back-to-title" class="btn btn-secondary">タイトルへ</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="rule-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <span data-action="close-modal" class="close-button">&times;</span>
+                <h2>ミラバーシのルール</h2>
+                <ul>
+                    <li>
+                        <strong>ゲームの目的</strong>
+                        <p>ゲーム終了時に、自分の色の石が相手より多く盤面を占めていれば勝利です。勝敗は石の枚数の割合（％）で決まります。</p>
+                    </li>
+                    <li>
+                        <strong>操作方法</strong>
+                        <p><b>視点移動:</b> PCではドラッグ、スマホではスワイプで盤面を自由に動かせます。</p>
+                        <p><b>ピースの配置:</b><br>
+                        1. 画面上部の「石」または「ブロック」ボタンで、置きたいピースのモードを選択します。<br>
+                        2. 置けるマスが盤面にハイライト表示されます。<br>
+                        3. ハイライトされたマスをタップ（クリック）すると、選択したモードのピースが置かれます。</p>
+                    </li>
+                    <li>
+                        <strong>基本ルール</strong>
+                        <p><b>石の配置:</b> 相手の石を、自分の石（今から置く石と盤上にある石）でタテ・ヨコ・ナナメのいずれかで挟める場所にのみ置けます。挟んだ相手の石は全て自分の色にひっくり返ります。</p>
+                        <p><b>ブロックの配置:</b> ゲーム開始時に設定した数だけ、好きな空きマスに置けます。ブロックは壁として機能し、ひっくり返ることもなく、石を挟むラインを遮断します。</p>
+                    </li>
+                    <li>
+                        <strong>特殊ルール</strong>
+                        <p><b>無限ループ盤面:</b> 盤面は上下・左右の端が繋がっており、盤の端を越えて相手の石を挟むことができます。</p>
+                        <p><b>ライン制圧:</b> ある直線上の残り1マスを除いて全てが相手の石で埋まっている場合、そのマスに自分の石を置くことで、ライン上の全ての石をひっくり返すことができます。</p>
+                    </li>
+                    <li>
+                        <strong>パスとゲーム終了</strong>
+                        <p><b>パス:</b> 自分のターンで「石を置ける場所」と「手持ちのブロック」の両方が無くなった場合、自動的にパスとなり相手のターンになります。</p>
+                        <p><b>ゲーム終了:</b> 以下のいずれかの条件でゲーム終了となります。<br>
+                        ・盤面の全てのマスが埋まった時<br>
+                        ・盤上からどちらか一方の色の石が全て無くなった時<br>
+                        ・両方のプレイヤーが続けてパスをした時</p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div id="settings-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h2>ゲーム設定</h2>
+                <div class="setting-item">
+                    <label for="board-size-select">盤面サイズ:</label>
+                    <select id="board-size-select" class="form-control">
+                        <option value="6">6x6</option>
+                        <option value="8" selected>8x8</option>
+                        <option value="10">10x10</option>
+                        <option value="12">12x12</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label for="block-count-input">ブロックの数 (各プレイヤー):</label>
+                    <input type="number" id="block-count-input" class="form-control" value="5" min="0" max="16">
+                </div>
+                <div class="setting-description">
+                    <p>0～<span id="block-max-value">16</span> の範囲で入力してください。</p>
+                </div>
+                <div class="modal-buttons">
+                    <button data-action="start-with-settings" class="btn">この設定で開始</button>
+                    <button data-action="close-modal" class="btn btn-secondary">キャンセル</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="confirm-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <p id="confirm-message"></p>
+                <div class="modal-buttons">
+                    <button data-action="confirm-yes" class="btn">はい</button>
+                    <button data-action="confirm-no" class="btn btn-secondary">いいえ</button>
                 </div>
             </div>
         </div>
     </div>
-
-    <div id="rule-modal" class="hidden">
-        <div class="modal-content">
-            <span id="close-rule-button" class="close-button">&times;</span>
-            <h2>ミラバーシのルール</h2>
-            <ul>
-                <li><strong>特殊ルール：無限ループ盤面</strong>
-                    <p>このゲームの盤面は、上下・左右の端がそれぞれ繋がった無限の空間です。ドラッグで自由に視点を移動できます。</p>
-                </li>
-                <li><strong>特殊ルール：ライン制圧</strong>
-                    <p>通常は相手の石を自分の石で挟む必要がありますが、ある直線上の残り1マスを除いて全てが相手の石で埋まっている場合、そのマスに自分の石を置くことで、直線上の全ての石をひっくり返すことができます。</p>
-                </li>
-                 <li><strong>ゲームの終了</strong>
-                    <p>盤のマスがすべて埋まった時、または両者ともどこにも石を置けなくなった時にゲーム終了となります。</p>
-                </li>
-            </ul>
-        </div>
-    </div>
-    
-    <div id="confirm-modal" class="hidden">
-        <div class="modal-content">
-            <p id="confirm-message"></p>
-            <div class="modal-buttons">
-                <button id="confirm-yes-button" class="btn">はい</button>
-                <button id="confirm-no-button" class="btn btn-secondary">いいえ</button>
-            </div>
-        </div>
-    </div>
-
     <script type="module" src="main.js"></script>
 </body>
 </html>
