@@ -47,7 +47,8 @@ export default class UI {
         this.elements.infiniteBoard.innerHTML = '';
         this.elements.infiniteBoard.style.transform = `translate(${this.viewX}px, ${this.viewY}px)`;
         
-        // ▼▼▼【変更点】描画範囲の「余白」を広げる ▼▼▼
+        // 画面外にも描画領域を広げることで、スムーズなスクロールを実現する。
+        // ビューポートの幅/高さに基づいて、描画するセルの範囲を計算する。
         const horizontalBuffer = Math.ceil(this.elements.viewport.clientWidth / CELL_SIZE);
         const verticalBuffer = Math.ceil(this.elements.viewport.clientHeight / CELL_SIZE);
 
@@ -55,7 +56,6 @@ export default class UI {
         const endCol = startCol + horizontalBuffer * 3;
         const startRow = Math.floor(-this.viewY / CELL_SIZE) - verticalBuffer;
         const endRow = startRow + verticalBuffer * 3;
-        // ▲▲▲ ここまで ▲▲▲
 
         for (let row = startRow; row <= endRow; row++) {
             for (let col = startCol; col <= endCol; col++) {

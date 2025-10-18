@@ -2,49 +2,51 @@
 import Game from './src/Game.js';
 import UI from './src/UI.js';
 
-let game;
-const ui = new UI();
-let placementMode = 'stone';
-let onConfirm = null;
-let isTitleActive = true;
-let currentGameSettings = null;
+const appState = {
+    game: null,
+    ui: new UI(),
+    placementMode: 'stone',
+    onConfirm: null,
+    isTitleActive: true,
+    currentGameSettings: null,
+};
 
 function showTitle() {
-    isTitleActive = true;
+    appState.isTitleActive = true;
     const titleGame = new Game({ boardSize: 8, blockCount: 0 });
-    ui.resetView(titleGame.getState());
-    ui.showScreen('title');
-    ui.render(titleGame.getState(), 'stone', []);
+    appState.ui.resetView(titleGame.getState());
+    appState.ui.showScreen('title');
+    appState.ui.render(titleGame.getState(), 'stone', []);
 }
 
 function startGame(settings) {
-    currentGameSettings = settings;
-    isTitleActive = false;
-    game = new Game(settings);
-    placementMode = 'stone';
-    ui.resetView(game.getState());
-    ui.showScreen('game');
+    appState.currentGameSettings = settings;
+    appState.isTitleActive = false;
+    appState.game = new Game(settings);
+    appState.placementMode = 'stone';
+    appState.ui.resetView(appState.game.getState());
+    appState.ui.showScreen('game');
     updateFullUI();
-    ui.displayMessage(null);
+    appState.ui.displayMessage(null);
 }
 
 // ▼▼▼【変更点】ターン交代の処理をシンプルに修正 ▼▼▼
 function handlePiecePlacement(row, col) {
-    if (game.getState().isGameOver || isTitleActive) return;
+    if (appState.game.getState().isGameOver || appState.isTitleActive) return;
     
-    const success = (placementMode === 'stone')
-        ? game.placeStone(row, col)
-        : game.placeBlock(row, col);
+    const success = (appState.placementMode === 'stone')
+        ? appState.game.placeStone(row, col)
+        : appState.game.placeBlock(row, col);
     
     if (success) {
-        placementMode = 'stone'; // 手番が終わったら自動的に石モードに戻す
+        appState.placementMode = 'stone'; // 手番が終わったら自動的に石モードに戻す
         
-        const gameStatus = game.switchTurn();
+        const gameStatus = appState.game.switchTurn();
 
         if (gameStatus.status === 'pass') {
-            ui.displayMessage('pass', gameStatus.passedPlayer);
+            appState.ui.displayMessage('pass', gameStatus.passedPlayer);
         } else if (gameStatus.status === 'end') {
-            ui.showResult(game.getState().board);
+            appState.ui.showResult(appState.game.getState().board);
         }
         
         updateFullUI();
@@ -52,10 +54,10 @@ function handlePiecePlacement(row, col) {
 }
 
 function updateFullUI() {
-    if (!game) return;
-    const state = game.getState();
-    const validMoves = isTitleActive ? [] : game.getValidMoves(state.currentPlayer, placementMode);
-    ui.render(state, placementMode, validMoves);
+    if (!appState.game) return;
+    const state = appState.game.getState();
+    const validMoves = appState.isTitleActive ? [] : appState.game.getValidMoves(state.currentPlayer, appState.placementMode);
+    appState.ui.render(state, appState.placementMode, validMoves);
 }
 
 document.getElementById('app').addEventListener('click', (e) => {
@@ -64,53 +66,53 @@ document.getElementById('app').addEventListener('click', (e) => {
 
     switch (action) {
         case 'show-settings':
-            ui.toggleSettingsModal(true);
+            appState.ui.toggleSettingsModal(true);
             break;
         case 'start-with-settings':
-            const boardSize = parseInt(ui.elements.settings.boardSizeSelect.value, 10);
-            const blockCount = parseInt(ui.elements.settings.blockCountInput.value, 10);
-            ui.toggleSettingsModal(false);
+            const boardSize = parseInt(appState.ui.elements.settings.boardSizeSelect.value, 10);
+            const blockCount = parseInt(appState.ui.elements.settings.blockCountInput.value, 10);
+            appState.ui.toggleSettingsModal(false);
             startGame({ boardSize, blockCount });
             break;
         case 'show-rules':
-            ui.toggleRuleModal(true);
+            appState.ui.toggleRuleModal(true);
             break;
         case 'close-modal':
-            ui.toggleRuleModal(false);
-            ui.toggleSettingsModal(false);
+            appState.ui.toggleRuleModal(false);
+            appState.ui.toggleSettingsModal(false);
             break;
         case 'reset':
-            if (game) {
-                onConfirm = () => startGame(currentGameSettings);
-                ui.toggleConfirmModal(true, "ゲームをリセットしますか？");
+            if (appState.game) {
+                appState.onConfirm = () => startGame(appState.currentGameSettings);
+                appState.ui.toggleConfirmModal(true, "ゲームをリセットしますか？");
             }
             break;
         case 'back-to-title':
-            onConfirm = showTitle;
-            ui.toggleConfirmModal(true, "タイトルに戻りますか？\n現在のゲームは失われます。");
+            appState.onConfirm = showTitle;
+            appState.ui.toggleConfirmModal(true, "タイトルに戻りますか？\n現在のゲームは失われます。");
             break;
         case 'set-mode':
-            if (isTitleActive || !game) return;
-            placementMode = e.target.dataset.mode;
+            if (appState.isTitleActive || !appState.game) return;
+            appState.placementMode = e.target.dataset.mode;
             updateFullUI();
             break;
         case 'confirm-yes':
-            if (onConfirm) onConfirm();
-            ui.toggleConfirmModal(false);
-            onConfirm = null;
+            if (appState.onConfirm) appState.onConfirm();
+            appState.ui.toggleConfirmModal(false);
+            appState.onConfirm = null;
             break;
         case 'confirm-no':
-            ui.toggleConfirmModal(false);
-            onConfirm = null;
+            appState.ui.toggleConfirmModal(false);
+            appState.onConfirm = null;
             break;
     }
 });
 
-ui.elements.settings.boardSizeSelect.addEventListener('change', () => {
-    ui.updateSettingsDefaults();
+appState.ui.elements.settings.boardSizeSelect.addEventListener('change', () => {
+    appState.ui.updateSettingsDefaults();
 });
 
-ui.elements.settings.blockCountInput.addEventListener('input', (e) => {
+appState.ui.elements.settings.blockCountInput.addEventListener('input', (e) => {
     const input = e.target;
     const max = parseInt(input.max, 10);
     const value = parseInt(input.value, 10);
@@ -124,8 +126,8 @@ let isInteracting = false;
 let didDrag = false;
 let startX, startY, lastX, lastY;
 
-ui.elements.viewport.addEventListener('mousedown', start);
-ui.elements.viewport.addEventListener('touchstart', start, { passive: false });
+appState.ui.elements.viewport.addEventListener('mousedown', start);
+appState.ui.elements.viewport.addEventListener('touchstart', start, { passive: false });
 window.addEventListener('mousemove', move);
 window.addEventListener('touchmove', move, { passive: false });
 window.addEventListener('mouseup', end);
@@ -147,10 +149,10 @@ function move(e) {
     const dy = point.clientY - startY;
     if (!didDrag && Math.sqrt(dx*dx + dy*dy) > 5) {
         didDrag = true;
-        ui.elements.viewport.style.cursor = 'grabbing';
+        appState.ui.elements.viewport.style.cursor = 'grabbing';
     }
     if (didDrag) {
-        ui.updateView(point.clientX - lastX, point.clientY - lastY);
+        appState.ui.updateView(point.clientX - lastX, point.clientY - lastY);
     }
     lastX = point.clientX; lastY = point.clientY;
 }
@@ -162,12 +164,12 @@ function end(e) {
     
     isInteracting = false;
     didDrag = false;
-    ui.elements.viewport.style.cursor = 'grab';
+    appState.ui.elements.viewport.style.cursor = 'grab';
 
     if (wasDragging) {
-        const state = game ? game.getState() : new Game({boardSize: 8, blockCount: 0}).getState();
-        const validMoves = isTitleActive || !game ? [] : game.getValidMoves(state.currentPlayer, placementMode);
-        ui.render(state, placementMode, validMoves);
+        const state = appState.game ? appState.game.getState() : new Game({boardSize: 8, blockCount: 0}).getState();
+        const validMoves = appState.isTitleActive || !appState.game ? [] : appState.game.getValidMoves(state.currentPlayer, appState.placementMode);
+        appState.ui.render(state, appState.placementMode, validMoves);
     } else {
         const cell = e.target.closest('.cell');
         if (cell) handlePiecePlacement(cell.dataset.row, cell.dataset.col);
